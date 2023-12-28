@@ -9,14 +9,11 @@ from typing import Tuple
 import numpy as np
 import pandas as pd
 
-
 HEADERS = 'user_id,item_id,timestamp,state_label,comma_separated_list_of_features'
-
 
 def rand_edge_feats(n_edges: int, dim: int) -> np.ndarray:
     print('generated random edge features')
     return np.random.randn(n_edges, dim)
-
 
 def read_snap_reddit_tsv(fpath: Path) -> Tuple[pd.DataFrame, np.ndarray]:
     u_list, i_list, ts_list, label_list = [], [], [], []
@@ -46,7 +43,6 @@ def read_snap_reddit_tsv(fpath: Path) -> Tuple[pd.DataFrame, np.ndarray]:
             'ts': ts_list,
             'label': label_list})
     return df, np.array(feat_l)
-
 
 def reformat_snap_reddit(data_dir: Path):
     df_title, ft_title = read_snap_reddit_tsv(data_dir / 'reddit-hyperlinks-title.tsv')

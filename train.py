@@ -16,8 +16,6 @@ from sklearn.metrics import roc_auc_score
 from module import TGAN
 from tgopt import NeighborFinder
 
-
-### Argument and global variables
 parser = argparse.ArgumentParser(Path(__file__).name)
 parser.add_argument('-d', '--data', type=str, required=True, help='dataset to use (e.g. snap-msg or jodie-wiki)')
 parser.add_argument('--model', type=str, required=True, help='prefix to name the saved model')
@@ -51,8 +49,6 @@ MODEL_SAVE_PATH = f'./saved_models/{args.model}-{args.data}.pth'
 get_checkpoint_path = lambda epoch: f'./saved_checkpoints/{args.model}-{args.data}-{epoch}.pth'
 data_dir = Path(args.dir)
 
-
-### set up logger
 log_time = int(time.time())
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
@@ -136,7 +132,6 @@ def eval_one_epoch(hint, tgan, sampler, src, dst, ts, label):
     return np.mean(val_acc), np.mean(val_ap), None, np.mean(val_auc)
 
 
-### Load data and train val test split
 g_df = pd.read_csv(data_dir / 'ml_{}.csv'.format(DATA))
 e_feat = np.load(data_dir / 'ml_{}.npy'.format(DATA))
 n_feat = np.load(data_dir / 'ml_{}_node.npy'.format(DATA))
@@ -255,7 +250,6 @@ np.random.shuffle(idx_list)
 
 early_stopper = EarlyStopMonitor(max_round=PATIENCE)
 for epoch in range(NUM_EPOCH):
-    # Training
     # training use only training graph
     tgan.ngh_finder = train_ngh_finder
     acc, ap, f1, auc, m_loss = [], [], [], [], []
@@ -300,11 +294,10 @@ for epoch in range(NUM_EPOCH):
     val_acc, val_ap, val_f1, val_auc = eval_one_epoch('val for old nodes', tgan, val_rand_sampler, val_src_l, val_dst_l, val_ts_l, val_label_l)
     nn_val_acc, nn_val_ap, nn_val_f1, nn_val_auc = eval_one_epoch('val for new nodes', tgan, nn_val_rand_sampler, nn_val_src_l, nn_val_dst_l, nn_val_ts_l, nn_val_label_l)
 
-    logger.info('epoch mean loss: {}'.format(np.mean(m_loss)))
-    logger.info('train acc: {}, val acc: {}, new node val acc: {}'.format(np.mean(acc), val_acc, nn_val_acc))
-    logger.info('train auc: {}, val auc: {}, new node val auc: {}'.format(np.mean(auc), val_auc, nn_val_auc))
-    logger.info('train ap: {}, val ap: {}, new node val ap: {}'.format(np.mean(ap), val_ap, nn_val_ap))
-    # logger.info('train f1: {}, val f1: {}, new node val f1: {}'.format(np.mean(f1), val_f1, nn_val_f1))
+    logger.info(f'epoch mean loss: {np.mean(m_loss)}')
+    logger.info(f'train acc: {np.mean(acc)}, val acc: {val_acc}, new node val acc: {nn_val_acc}')
+    logger.info(f'train auc: {np.mean(auc)}, val auc: {val_auc}, new node val auc: {nn_val_auc}')
+    logger.info(f'train ap: {np.mean(ap)}, val ap: {val_ap}, new node val ap: {nn_val_ap}')
 
     if early_stopper.early_stop_check(val_ap):
         logger.info('No improvment over {} epochs, stop training'.format(early_stopper.max_round))
