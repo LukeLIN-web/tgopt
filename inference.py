@@ -11,10 +11,8 @@ import torch
 from module import TGAN
 from tgopt import TGOpt, NeighborFinder
 
-
 # NOTE: for more accurate stats/timings when running with GPU, uncomment the
 # `synchronize()` calls in `inference.py`, `module.py`, and `tgopt.py`.
-
 
 ### Argument and global variables
 parser = argparse.ArgumentParser(Path(__file__).name)
@@ -55,7 +53,6 @@ if args.save_embeds:
     get_embed_path = lambda batch: f'./saved_embeds/{args.prefix}-{args.data}-{batch}.pth'
 data_dir = Path(args.dir)
 
-
 ### Set up logger
 log_time = int(time.time())
 logging.basicConfig(level=logging.INFO)
@@ -74,9 +71,9 @@ logger.info(args)
 
 
 ### Load data and build graph
-g_df = pd.read_csv(data_dir / 'ml_{}.csv'.format(DATA))
-e_feat = np.load(data_dir / 'ml_{}.npy'.format(DATA))
-n_feat = np.load(data_dir / 'ml_{}_node.npy'.format(DATA))
+g_df = pd.read_csv(data_dir / f'ml_{DATA}.csv')
+e_feat = np.load(data_dir / f'ml_{DATA}.npy')
+n_feat = np.load(data_dir / f'ml_{DATA}_node.npy')
 
 src_l = g_df.u.values
 dst_l = g_df.i.values
@@ -96,7 +93,6 @@ del g_df
 
 
 ### Run inference
-
 def init_opt(args, model: TGAN) -> TGOpt:
     opt = TGOpt(False)
     if ENABLE_OPTS:
@@ -122,16 +118,16 @@ def init_opt(args, model: TGAN) -> TGOpt:
     return opt
 
 
-device = torch.device('cuda:{}'.format(GPU) if GPU >= 0 else 'cpu')
+device = torch.device(f'cuda:{GPU}' if GPU >= 0 else 'cpu')
 
 num_instance = len(src_l)
 num_batch = math.ceil(num_instance / BATCH_SIZE)
-logger.info('num of instances: {}'.format(num_instance))
-logger.info('num of batches: {}'.format(num_batch))
+logger.info(f'num of instances: {num_instance}')
+logger.info(f'num of batches: {num_batch}')
 
 runtimes = []
 for r in range(args.runs):
-    logger.info('start run {}'.format(r + 1))
+    logger.info(f'start run {r + 1}')
 
     model = TGAN(full_ngh_finder, n_feat, e_feat,
             num_layers=NUM_LAYER, num_heads=NUM_HEADS)
