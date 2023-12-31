@@ -12,13 +12,13 @@ dev="$1"
 
 n_runs=10
 datasets=(
-  jodie-lastfm
+  # jodie-lastfm
   jodie-mooc
-  jodie-reddit
+  # jodie-reddit
   jodie-wiki
   snap-email
   snap-msg
-  snap-reddit
+  # snap-reddit
 )
 
 numa_cmd=""

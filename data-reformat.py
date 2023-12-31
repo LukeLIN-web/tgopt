@@ -83,7 +83,7 @@ def reformat_snap_reddit(data_dir: Path):
 def reformat_snap_txt(in_fpath: Path, out_fpath: Path, rand_dim: int):
     df = pd.read_csv(in_fpath, sep=' ', header=None, names=['u', 'i', 'ts'])
     df['label'] = np.zeros(df.shape[0], dtype=int)
-    feat = pd.DataFrame(rand_edge_feats(df.shape[0], rand_dim))
+    feat = pd.DataFrame(rand_edge_feats(df.shape[0], rand_dim)) # 随机生成fake edge feature.
     df = pd.concat([df, feat], axis=1)
     del feat
     save_csv(out_fpath, df)

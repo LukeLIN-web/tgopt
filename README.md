@@ -16,6 +16,7 @@ conda to create a virtual Python environment. If needed, manually compile the
 extension after installing dependencies:
 
 ```
+$ pip install -r requirements.txt
 $ cd extension && make && cd ..
 ```
 
