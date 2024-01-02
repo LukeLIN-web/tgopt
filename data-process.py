@@ -29,11 +29,13 @@ def preprocess(data_name):
             idx_list.append(idx)
             feat_l.append(feat)
 
-    return pd.DataFrame({'u': u_list,
-                         'i': i_list,
-                         'ts': ts_list,
-                         'label': label_list,
-                         'idx': idx_list}), np.array(feat_l)
+    return pd.DataFrame({
+        'u': u_list,
+        'i': i_list,
+        'ts': ts_list,
+        'label': label_list,
+        'idx': idx_list
+    }), np.array(feat_l)
 
 
 def reindex(df, bipartite=False):
@@ -55,7 +57,8 @@ def reindex(df, bipartite=False):
         'i': dst_idx_l,
         'ts': df.ts.values,
         'label': df.label.values,
-        'idx': e_idx_l})
+        'idx': e_idx_l
+    })
 
     return df
 
@@ -89,9 +92,19 @@ def run(name, data_dir, bipartite=False):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(Path(__file__).name)
-    parser.add_argument('-d', '--data', type=str, required=True, help='dataset to process (e.g. snap-msg or jodie-wiki)')
-    parser.add_argument('--dir', type=str, default='data', help='directory to load data files (default: data)')
-    parser.add_argument('--bipartite', action='store_true', help='shift node ids for bipartite graphs')
+    parser.add_argument(
+        '-d',
+        '--data',
+        type=str,
+        required=True,
+        help='dataset to process (e.g. snap-msg or jodie-wiki)')
+    parser.add_argument('--dir',
+                        type=str,
+                        default='data',
+                        help='directory to load data files (default: data)')
+    parser.add_argument('--bipartite',
+                        action='store_true',
+                        help='shift node ids for bipartite graphs')
     args = parser.parse_args()
 
     run(args.data, Path(args.dir), bipartite=args.bipartite)

@@ -1,12 +1,14 @@
 import sys
-import numpy as np
-import pandas as pd
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-
+import numpy as np
+import pandas as pd
 
 if len(sys.argv) < 3:
-    print(f'usage: plot-hit-rate.py <top-dataset> <top.csv> <bot-dataset> <bot.csv>')
+    print(
+        f'usage: plot-hit-rate.py <top-dataset> <top.csv> <bot-dataset> <bot.csv>'
+    )
     sys.exit(1)
 
 top_name = sys.argv[1]
@@ -17,11 +19,13 @@ bot_csv = sys.argv[4]
 df_top = pd.read_csv(top_csv)
 df_bot = pd.read_csv(bot_csv)
 
+
 def calc_num_batches(df: pd.DataFrame):
     single_batch = df[df['batch'] == 1]
     per_batch = len(single_batch)
     assert (len(df) % per_batch == 0)
     return len(df) // per_batch
+
 
 def running_avg(df: pd.DataFrame, n_batch: int, window: int):
     batch = np.zeros((n_batch, 3))
@@ -36,6 +40,7 @@ def running_avg(df: pd.DataFrame, n_batch: int, window: int):
         e_idx = b + 1
         avgs[b] = np.mean(batch[s_idx:e_idx, 2])
     return avgs
+
 
 mpl.rcParams['pdf.fonttype'] = 42
 mpl.rcParams['ps.fonttype'] = 42

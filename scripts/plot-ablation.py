@@ -1,13 +1,16 @@
 import sys
-import numpy as np
-import pandas as pd
+from pathlib import Path
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from pathlib import Path
+import numpy as np
+import pandas as pd
 
 
 def print_usage():
-    print(f'usage: plot-ablation.py [--merge] <cpu | gpu> <base.csv> <ab1.csv> <ab2.csv> <ab3.csv>')
+    print(
+        f'usage: plot-ablation.py [--merge] <cpu | gpu> <base.csv> <ab1.csv> <ab2.csv> <ab3.csv>'
+    )
 
 
 if len(sys.argv) < 6:
@@ -64,9 +67,21 @@ x_txt = list(df_base['dataset'])
 x_pos = np.arange(len(x_txt))
 
 ax1.bar(x_pos, xup_base, width=width, label=labels[0], color='tab:orange')
-ax1.bar(x_pos + width, speedup1, width=width, label=labels[1], color='tab:blue')
-ax1.bar(x_pos + width * 2, speedup2, width=width, label=labels[2], color='tab:green')
-ax1.bar(x_pos + width * 3, speedup3, width=width, label=labels[3], color='tab:red')
+ax1.bar(x_pos + width,
+        speedup1,
+        width=width,
+        label=labels[1],
+        color='tab:blue')
+ax1.bar(x_pos + width * 2,
+        speedup2,
+        width=width,
+        label=labels[2],
+        color='tab:green')
+ax1.bar(x_pos + width * 3,
+        speedup3,
+        width=width,
+        label=labels[3],
+        color='tab:red')
 ax1.set_xticks(x_pos + width * 1.5, x_txt)
 ax1.set_ylabel(f'{dev} speedup (x)')
 ax1.legend(loc='lower center', ncol=4, bbox_to_anchor=(0.5, -0.2))

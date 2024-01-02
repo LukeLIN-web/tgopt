@@ -1,9 +1,9 @@
 import sys
-import numpy as np
-import pandas as pd
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-
+import numpy as np
+import pandas as pd
 
 if len(sys.argv) < 4:
     print(f'usage: plot-exp.py <cpu | gpu> <base.csv> <opt.csv>')
@@ -35,8 +35,20 @@ bar_labels = [f'{x:.1f}x' for x in speedup]
 err_kw = {'elinewidth': 2, 'capsize': 4}
 
 ax1 = fig.add_subplot(111)
-ax1.bar(x_pos, y_base_avg, width=width, yerr=y_base_err, error_kw=err_kw, label='baseline *', color='tab:orange')
-bar_ours = ax1.bar(x_pos + width, y_ours_avg, width=width, yerr=y_ours_err, error_kw=err_kw, label='TGOpt', color='tab:blue')
+ax1.bar(x_pos,
+        y_base_avg,
+        width=width,
+        yerr=y_base_err,
+        error_kw=err_kw,
+        label='baseline *',
+        color='tab:orange')
+bar_ours = ax1.bar(x_pos + width,
+                   y_ours_avg,
+                   width=width,
+                   yerr=y_ours_err,
+                   error_kw=err_kw,
+                   label='TGOpt',
+                   color='tab:blue')
 ax1.set_xticks(x_pos + width / 2, x_txt)
 ax1.tick_params(axis='x', labelrotation=15)
 

@@ -11,9 +11,11 @@ import pandas as pd
 
 HEADERS = 'user_id,item_id,timestamp,state_label,comma_separated_list_of_features'
 
+
 def rand_edge_feats(n_edges: int, dim: int) -> np.ndarray:
     print('generated random edge features')
     return np.random.randn(n_edges, dim)
+
 
 def read_snap_reddit_tsv(fpath: Path) -> Tuple[pd.DataFrame, np.ndarray]:
     u_list, i_list, ts_list, label_list = [], [], [], []
@@ -38,15 +40,19 @@ def read_snap_reddit_tsv(fpath: Path) -> Tuple[pd.DataFrame, np.ndarray]:
             feat_l.append(feat)
 
     df = pd.DataFrame({
-            'u': u_list,
-            'i': i_list,
-            'ts': ts_list,
-            'label': label_list})
+        'u': u_list,
+        'i': i_list,
+        'ts': ts_list,
+        'label': label_list
+    })
     return df, np.array(feat_l)
 
+
 def reformat_snap_reddit(data_dir: Path):
-    df_title, ft_title = read_snap_reddit_tsv(data_dir / 'reddit-hyperlinks-title.tsv')
-    df_body, ft_body = read_snap_reddit_tsv(data_dir / 'reddit-hyperlinks-body.tsv')
+    df_title, ft_title = read_snap_reddit_tsv(data_dir /
+                                              'reddit-hyperlinks-title.tsv')
+    df_body, ft_body = read_snap_reddit_tsv(data_dir /
+                                            'reddit-hyperlinks-body.tsv')
 
     df_full = pd.concat([df_title, df_body])
     del df_title
@@ -83,7 +89,8 @@ def reformat_snap_reddit(data_dir: Path):
 def reformat_snap_txt(in_fpath: Path, out_fpath: Path, rand_dim: int):
     df = pd.read_csv(in_fpath, sep=' ', header=None, names=['u', 'i', 'ts'])
     df['label'] = np.zeros(df.shape[0], dtype=int)
-    feat = pd.DataFrame(rand_edge_feats(df.shape[0], rand_dim)) # 随机生成fake edge feature.
+    feat = pd.DataFrame(rand_edge_feats(df.shape[0],
+                                        rand_dim))  # 随机生成fake edge feature.
     df = pd.concat([df, feat], axis=1)
     del feat
     save_csv(out_fpath, df)
@@ -131,10 +138,28 @@ def run(name: str, data_dir: Path, rand_dim: int):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(Path(__file__).name)
-    parser.add_argument('-d', '--data', type=str, required=True, help='dataset to reformat (e.g. snap-msg or jodie-wiki)')
-    parser.add_argument('--dir', type=str, default='data', help='directory to load/save data files (default: data)')
-    parser.add_argument('--rand-dim', type=int, default=100, help='dimension to use if generating random edge features (default: 100)')
-    parser.add_argument('--seed', type=int, default=-1, help='seed to use when doing random (default: -1 to not set)')
+    parser.add_argument(
+        '-d',
+        '--data',
+        type=str,
+        required=True,
+        help='dataset to reformat (e.g. snap-msg or jodie-wiki)')
+    parser.add_argument(
+        '--dir',
+        type=str,
+        default='data',
+        help='directory to load/save data files (default: data)')
+    parser.add_argument(
+        '--rand-dim',
+        type=int,
+        default=100,
+        help=
+        'dimension to use if generating random edge features (default: 100)')
+    parser.add_argument(
+        '--seed',
+        type=int,
+        default=-1,
+        help='seed to use when doing random (default: -1 to not set)')
     args = parser.parse_args()
 
     if args.seed >= 0:

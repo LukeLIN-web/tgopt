@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import torch
-from sklearn.metrics import average_precision_score, f1_score, roc_auc_score
+from sklearn.metrics import average_precision_score, roc_auc_score
 
 from module import TGAN
 from tgopt import NeighborFinder
@@ -77,19 +77,20 @@ DROP_OUT = args.drop_out
 PATIENCE = args.patience
 GPU = args.gpu
 
+# ENABLE_OPTS = (args.opt_all or args.opt_dedup or args.opt_cache or args.opt_time)
+
 Path('./logs').mkdir(parents=True, exist_ok=True)
 Path('./saved_models').mkdir(parents=True, exist_ok=True)
 Path('./saved_checkpoints').mkdir(parents=True, exist_ok=True)
 MODEL_SAVE_PATH = f'./saved_models/{args.model}-{args.data}.pth'
-get_checkpoint_path = lambda epoch: f'./saved_checkpoints/{args.model}-{args.data}-{epoch}.pth'
 data_dir = Path(args.dir)
 
+### Set up logger
 log_time = int(time.time())
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
-fh = logging.FileHandler('logs/{}-{}-{}.log'.format(args.model, args.data,
-                                                    str(log_time)))
+fh = logging.FileHandler(f'logs/{args.model}-{args.data}-{str(log_time)}.log')
 fh.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
 ch.setLevel(logging.WARN)
@@ -102,34 +103,7 @@ logger.addHandler(ch)
 logger.info(args)
 
 
-### Utility function and class
-class EarlyStopMonitor(object):
-
-    def __init__(self, max_round=3, higher_better=True, tolerance=1e-10):
-        self.max_round = max_round
-        self.num_round = 0
-        self.epoch_count = 0
-        self.best_epoch = 0
-        self.last_best = None
-        self.higher_better = higher_better
-        self.tolerance = tolerance
-
-    def early_stop_check(self, curr_val):
-        if not self.higher_better:
-            curr_val *= -1
-        if self.last_best is None:
-            self.last_best = curr_val
-        elif (curr_val - self.last_best) / np.abs(
-                self.last_best) > self.tolerance:
-            self.last_best = curr_val
-            self.num_round = 0
-            self.best_epoch = self.epoch_count
-        else:
-            self.num_round += 1
-        self.epoch_count += 1
-        return self.num_round >= self.max_round
-
-
+# why need this ?
 class RandEdgeSampler(object):
 
     def __init__(self, src_list, dst_list):
@@ -170,7 +144,6 @@ def eval_one_epoch(hint, tgan, sampler, src, dst, ts, label):
 
             val_acc.append((pred_label == true_label).mean())
             val_ap.append(average_precision_score(true_label, pred_score))
-            # val_f1.append(f1_score(true_label, pred_label))
             val_auc.append(roc_auc_score(true_label, pred_score))
     return np.mean(val_acc), np.mean(val_ap), None, np.mean(val_auc)
 
@@ -179,7 +152,8 @@ g_df = pd.read_csv(data_dir / f'ml_{DATA}.csv')
 e_feat = np.load(data_dir / f'ml_{DATA}.npy')
 n_feat = np.load(data_dir / f'ml_{DATA}_node.npy')
 
-val_time, test_time = list(np.quantile(g_df.ts, [0.70, 0.85]))
+val_time, test_time = list(np.quantile(g_df.ts,
+                                       [0.70, 0.85]))  # why need this?
 
 src_l = g_df.u.values
 dst_l = g_df.i.values
@@ -276,7 +250,7 @@ nn_val_rand_sampler = RandEdgeSampler(nn_val_src_l, nn_val_dst_l)
 test_rand_sampler = RandEdgeSampler(src_l, dst_l)
 nn_test_rand_sampler = RandEdgeSampler(nn_test_src_l, nn_test_dst_l)
 
-### Model initialize
+### Model load
 device = torch.device(f'cuda:{GPU}' if GPU >= 0 else 'cpu')
 tgan = TGAN(train_ngh_finder,
             n_feat,
@@ -298,7 +272,6 @@ logger.info(f'num of batches per epoch: {num_batch}')
 idx_list = np.arange(num_instance)
 np.random.shuffle(idx_list)
 
-early_stopper = EarlyStopMonitor(max_round=PATIENCE)
 for epoch in range(NUM_EPOCH):
     # training use only training graph
     tgan.ngh_finder = train_ngh_finder
@@ -362,34 +335,6 @@ for epoch in range(NUM_EPOCH):
     logger.info(
         f'train ap: {np.mean(ap)}, val ap: {val_ap}, new node val ap: {nn_val_ap}'
     )
-
-    if early_stopper.early_stop_check(val_ap):
-        logger.info(
-            f'No improvment over {early_stopper.max_round} epochs, stop training'
-        )
-        logger.info(
-            f'Loading the best model at epoch {early_stopper.best_epoch}')
-        best_model_path = get_checkpoint_path(early_stopper.best_epoch)
-        state = torch.load(best_model_path)
-        state['n_feat_th'] = saved_n_feat_th
-        state['e_feat_th'] = saved_e_feat_th
-        state['node_raw_embed.weight'] = saved_n_feat_th
-        state['edge_raw_embed.weight'] = saved_e_feat_th
-        tgan.load_state_dict(state)
-        del state
-        logger.info(
-            f'Loaded the best model at epoch {early_stopper.best_epoch} for inference'
-        )
-        tgan.eval()
-        break
-    else:
-        state = tgan.state_dict()
-        del state['n_feat_th']
-        del state['e_feat_th']
-        del state['node_raw_embed.weight']
-        del state['edge_raw_embed.weight']
-        torch.save(state, get_checkpoint_path(epoch))
-        del state
 
 # testing phase use all information
 tgan.ngh_finder = full_ngh_finder

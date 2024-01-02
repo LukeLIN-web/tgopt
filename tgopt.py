@@ -2,15 +2,19 @@ import time
 
 import numpy as np
 import pandas as pd
+import tgopt_ext
 import torch
 from torch import Tensor
 
-import tgopt_ext
-
 
 class TGOpt(object):
-    def __init__(self, enabled: bool, device='cpu',
-                 dedup_targets=False, cache_embeds=False, precompute_time=False,
+
+    def __init__(self,
+                 enabled: bool,
+                 device='cpu',
+                 dedup_targets=False,
+                 cache_embeds=False,
+                 precompute_time=False,
                  collect_hits=False):
         self.enabled = enabled
         self.enabled_dedup = dedup_targets
@@ -36,7 +40,9 @@ class TGOpt(object):
             self._n_layers = n_layers
             self._feat_dim = feat_dim
             # key: (layer) node, ts -> val: embedding
-            self._cache = [tgopt_ext.EmbedTable(limit) for _ in range(n_layers - 1)]
+            self._cache = [
+                tgopt_ext.EmbedTable(limit) for _ in range(n_layers - 1)
+            ]
 
     def init_time(self, time_dim: int, time_window: int, encoder):
         if self.enabled and self.enabled_time:
@@ -84,7 +90,7 @@ class TGOpt(object):
         uniq_size = ts_delta.shape[0]
 
         if hit_count != uniq_size:
-            miss_idx = (~ hit_idx)
+            miss_idx = (~hit_idx)
             ts_delta = ts_delta[miss_idx]
             miss_embeds = encoder(ts_delta.view(-1, 1)).squeeze(dim=1)
             out_embeds[miss_idx] = miss_embeds
@@ -152,7 +158,8 @@ class TGOpt(object):
         df = pd.DataFrame({
             'batch': np.array(c_batch),
             'hits': np.array(c_hits),
-            'sizes': np.array(c_sizes)})
+            'sizes': np.array(c_sizes)
+        })
         return df
 
 
@@ -169,9 +176,12 @@ class NeighborFinder:
         for neighbors in adj_list:
             # Neighbors is a list of tuples (neighbor, edge_idx, timestamp)
             sorted_neighhbors = sorted(neighbors, key=by_timestamp)
-            self.node_to_nghs.append(np.array([x[0] for x in sorted_neighhbors], dtype=np.int32))
-            self.node_to_eidx.append(np.array([x[1] for x in sorted_neighhbors], dtype=np.int32))
-            self.node_to_time.append(np.array([x[2] for x in sorted_neighhbors], dtype=np.float32))
+            self.node_to_nghs.append(
+                np.array([x[0] for x in sorted_neighhbors], dtype=np.int32))
+            self.node_to_eidx.append(
+                np.array([x[1] for x in sorted_neighhbors], dtype=np.int32))
+            self.node_to_time.append(
+                np.array([x[2] for x in sorted_neighhbors], dtype=np.float32))
 
     def ngh_lookup(self, src_l: np.ndarray, ts_l: np.ndarray, n_ngh=20):
         assert (len(src_l) == len(ts_l))
@@ -186,7 +196,7 @@ class NeighborFinder:
             time_l.append(self.node_to_time[src_idx])
 
         out_nghs, out_eidx, out_time = tgopt_ext.sample_recent_ngh(
-                n_ngh, ts_l, nghs_l, eidx_l, time_l)
+            n_ngh, ts_l, nghs_l, eidx_l, time_l)
 
         self._t_ngh_lookup += (time.perf_counter() - t_start)
 
