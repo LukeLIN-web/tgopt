@@ -31,18 +31,12 @@ parser.add_argument('--bs',
                     type=int,
                     default=200,
                     help='batch size (default: 200)')
-parser.add_argument('--n-epoch',
-                    type=int,
-                    default=50,
-                    help='number of epochs (default: 50)')
+parser.add_argument('--n-epoch', type=int, default=5)
 parser.add_argument('--n-degree',
                     type=int,
                     default=20,
                     help='number of neighbors to sample (default: 20)')
-parser.add_argument('--n-layer',
-                    type=int,
-                    default=2,
-                    help='number of network layers (default: 2)')
+parser.add_argument('--n-layer', type=int, default=2)
 parser.add_argument(
     '--n-head',
     type=int,
@@ -122,7 +116,9 @@ def eval_one_epoch(hint, tgan, sampler, src, dst, ts, label):
         TEST_BATCH_SIZE = 30
         num_test_instance = len(src)
         num_test_batch = math.ceil(num_test_instance / TEST_BATCH_SIZE)
+        t_total = 0
         for k in range(num_test_batch):
+            t_start = time.perf_counter()
             s_idx = k * TEST_BATCH_SIZE
             e_idx = min(num_test_instance, s_idx + TEST_BATCH_SIZE)
             src_l_cut = src[s_idx:e_idx]
@@ -141,9 +137,14 @@ def eval_one_epoch(hint, tgan, sampler, src, dst, ts, label):
             pred_label = pred_score > 0.5
             true_label = np.concatenate([np.ones(size), np.zeros(size)])
 
+            t_total += (time.perf_counter() - t_start)
             val_acc.append((pred_label == true_label).mean())
             val_ap.append(average_precision_score(true_label, pred_score))
             val_auc.append(roc_auc_score(true_label, pred_score))
+        logger.info(f'inference total elapsed: {t_total} secs')
+        logger.info(
+            f'average inference time per batch: {t_total / num_test_batch} secs'
+        )
     return np.mean(val_acc), np.mean(val_ap), None, np.mean(val_auc)
 
 
