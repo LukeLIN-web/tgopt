@@ -81,7 +81,6 @@ GPU = args.gpu
 
 Path('./logs').mkdir(parents=True, exist_ok=True)
 Path('./saved_models').mkdir(parents=True, exist_ok=True)
-Path('./saved_checkpoints').mkdir(parents=True, exist_ok=True)
 MODEL_SAVE_PATH = f'./saved_models/{args.model}-{args.data}.pth'
 data_dir = Path(args.dir)
 
@@ -171,7 +170,7 @@ num_total_unique_nodes = len(total_node_set)
 
 mask_node_set = set(
     random.sample(
-        set(src_l[ts_l > val_time]).union(set(dst_l[ts_l > val_time])),
+        tuple(set(src_l[ts_l > val_time]).union(set(dst_l[ts_l > val_time]))),
         int(0.1 * num_total_unique_nodes)))
 mask_src_flag = g_df.u.map(lambda x: x in mask_node_set).values
 mask_dst_flag = g_df.i.map(lambda x: x in mask_node_set).values
@@ -258,6 +257,14 @@ tgan = TGAN(train_ngh_finder,
             num_layers=NUM_LAYER,
             num_heads=NUM_HEADS,
             drop_out=DROP_OUT)
+state = torch.load(MODEL_SAVE_PATH, map_location=device)
+state['n_feat_th'] = tgan.n_feat_th
+state['e_feat_th'] = tgan.e_feat_th
+state['node_raw_embed.weight'] = tgan.n_feat_th
+state['edge_raw_embed.weight'] = tgan.e_feat_th
+tgan.load_state_dict(state)
+del state
+
 optimizer = torch.optim.Adam(tgan.parameters(), lr=LEARNING_RATE)
 criterion = torch.nn.BCELoss()
 tgan = tgan.to(device)
@@ -329,12 +336,6 @@ for epoch in range(NUM_EPOCH):
     logger.info(
         f'train acc: {np.mean(acc)}, val acc: {val_acc}, new node val acc: {nn_val_acc}'
     )
-    logger.info(
-        f'train auc: {np.mean(auc)}, val auc: {val_auc}, new node val auc: {nn_val_auc}'
-    )
-    logger.info(
-        f'train ap: {np.mean(ap)}, val ap: {val_ap}, new node val ap: {nn_val_ap}'
-    )
 
 # testing phase use all information
 tgan.ngh_finder = full_ngh_finder
@@ -350,12 +351,3 @@ logger.info('Test statistics: Old nodes -- acc: {}, auc: {}, ap: {}'.format(
     test_acc, test_auc, test_ap))
 logger.info('Test statistics: New nodes -- acc: {}, auc: {}, ap: {}'.format(
     nn_test_acc, nn_test_auc, nn_test_ap))
-
-logger.info('Saving TGAN model')
-state = tgan.state_dict()
-del state['n_feat_th']
-del state['e_feat_th']
-del state['node_raw_embed.weight']
-del state['edge_raw_embed.weight']
-torch.save(state, MODEL_SAVE_PATH)
-logger.info('TGAN model saved')
