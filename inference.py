@@ -112,8 +112,8 @@ log_time = int(time.time())
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
-fh = logging.FileHandler('logs/infer-{}-{}-{}.log'.format(
-    args.prefix, args.data, str(log_time)))
+fh = logging.FileHandler(
+    f'logs/infer-{args.prefix}-{args.data}-{str(log_time)}.log')
 fh.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
 ch.setLevel(logging.WARN)
@@ -169,7 +169,7 @@ def init_opt(args, model: TGAN) -> TGOpt:
             opt.init_time(time_dim=n_feat.shape[1],
                           time_window=args.time_window,
                           encoder=model.time_encoder)
-    model._opt = opt
+    model._opt = opt  # 在这里设置opt
     return opt
 
 

@@ -11,7 +11,7 @@ import torch
 from sklearn.metrics import average_precision_score, roc_auc_score
 
 from module import TGAN
-from tgopt import NeighborFinder
+from tgopt import NeighborFinder, TGOpt
 
 parser = argparse.ArgumentParser(Path(__file__).name)
 parser.add_argument('-d',
@@ -58,6 +58,29 @@ parser.add_argument('--gpu',
                     type=int,
                     default=-1,
                     help='idx for the gpu to use (default: -1 for cpu)')
+parser.add_argument('--opt-all',
+                    action='store_true',
+                    help='enable all optimizations')
+parser.add_argument('--opt-dedup',
+                    action='store_true',
+                    help='enable deduplication optimization')
+parser.add_argument('--opt-cache',
+                    action='store_true',
+                    help='enable caching optimization')
+parser.add_argument('--opt-time',
+                    action='store_true',
+                    help='enable precomputing time encodings')
+parser.add_argument('--cache-limit',
+                    type=int,
+                    default=int(2e6),
+                    help='max number of embeds to cache (default: 2e6)')
+parser.add_argument('--time-window',
+                    type=int,
+                    default=int(1e4),
+                    help='time window to precompute (default: 1e4)')
+parser.add_argument('--stats',
+                    action='store_true',
+                    help="enable printing of more detailed stats")
 args = parser.parse_args()
 
 DATA = args.data
@@ -71,7 +94,8 @@ DROP_OUT = args.drop_out
 PATIENCE = args.patience
 GPU = args.gpu
 
-# ENABLE_OPTS = (args.opt_all or args.opt_dedup or args.opt_cache or args.opt_time)
+ENABLE_OPTS = (args.opt_all or args.opt_dedup or args.opt_cache
+               or args.opt_time)
 
 Path('./logs').mkdir(parents=True, exist_ok=True)
 Path('./saved_models').mkdir(parents=True, exist_ok=True)
@@ -244,6 +268,31 @@ for src, dst, eidx, ts in zip(src_l, dst_l, e_idx_l, ts_l):
 full_ngh_finder = NeighborFinder(full_adj_list)
 del full_adj_list
 
+
+def init_opt(args, model: TGAN) -> TGOpt:
+    opt = TGOpt(False)
+    if ENABLE_OPTS:
+        do_dedup = args.opt_dedup or args.opt_all
+        do_cache = args.opt_cache or args.opt_all
+        do_time = args.opt_time or args.opt_all
+        opt = TGOpt(True,
+                    device=device,
+                    dedup_targets=do_dedup,
+                    cache_embeds=do_cache,
+                    precompute_time=do_time,
+                    collect_hits=args.stats)
+        if do_cache:
+            opt.init_cache(n_layers=NUM_LAYER,
+                           feat_dim=n_feat.shape[1],
+                           limit=args.cache_limit)
+        if do_time:
+            opt.init_time(time_dim=n_feat.shape[1],
+                          time_window=args.time_window,
+                          encoder=model.time_encoder)
+    model._opt = opt
+    return opt
+
+
 train_rand_sampler = RandEdgeSampler(train_src_l, train_dst_l)
 val_rand_sampler = RandEdgeSampler(src_l, dst_l)
 nn_val_rand_sampler = RandEdgeSampler(nn_val_src_l, nn_val_dst_l)
@@ -273,68 +322,7 @@ tgan = tgan.to(device)
 saved_n_feat_th = tgan.n_feat_th
 saved_e_feat_th = tgan.e_feat_th
 
-num_instance = len(train_src_l)
-num_batch = math.ceil(num_instance / BATCH_SIZE)
-idx_list = np.arange(num_instance)
-np.random.shuffle(idx_list)
-
-for epoch in range(NUM_EPOCH):
-    # training use only training graph
-    tgan.ngh_finder = train_ngh_finder
-    acc, ap, f1, auc, m_loss = [], [], [], [], []
-    np.random.shuffle(idx_list)
-    logger.info(f'start epoch {epoch}')
-
-    for k in range(num_batch):
-        s_idx = k * BATCH_SIZE
-        e_idx = min(num_instance, s_idx + BATCH_SIZE)
-
-        src_l_cut, dst_l_cut = train_src_l[s_idx:e_idx], train_dst_l[
-            s_idx:e_idx]
-        ts_l_cut = train_ts_l[s_idx:e_idx]
-        label_l_cut = train_label_l[s_idx:e_idx]
-        size = len(src_l_cut)
-        src_l_fake, dst_l_fake = train_rand_sampler.sample(size)
-
-        with torch.no_grad():
-            pos_label = torch.ones(size, dtype=torch.float, device=device)
-            neg_label = torch.zeros(size, dtype=torch.float, device=device)
-
-        optimizer.zero_grad()
-        tgan = tgan.train()
-        pos_prob, neg_prob = tgan.contrast(src_l_cut, dst_l_cut, dst_l_fake,
-                                           ts_l_cut, NUM_NEIGHBORS)
-        loss = criterion(pos_prob, pos_label)
-        loss += criterion(neg_prob, neg_label)
-        loss.backward()
-        optimizer.step()
-
-        with torch.no_grad():
-            tgan = tgan.eval()
-            pred_score = np.concatenate([(pos_prob).cpu().detach().numpy(),
-                                         (neg_prob).cpu().detach().numpy()])
-            pred_label = pred_score > 0.5
-            true_label = np.concatenate([np.ones(size), np.zeros(size)])
-            acc.append((pred_label == true_label).mean())
-            ap.append(average_precision_score(true_label, pred_score))
-            # f1.append(f1_score(true_label, pred_label))
-            m_loss.append(loss.item())
-            auc.append(roc_auc_score(true_label, pred_score))
-
-    # validation phase use all information
-    tgan.ngh_finder = full_ngh_finder
-    val_acc, val_ap, val_f1, val_auc = eval_one_epoch('val for old nodes',
-                                                      tgan, val_rand_sampler,
-                                                      val_src_l, val_dst_l,
-                                                      val_ts_l, val_label_l)
-    nn_val_acc, nn_val_ap, nn_val_f1, nn_val_auc = eval_one_epoch(
-        'val for new nodes', tgan, nn_val_rand_sampler, nn_val_src_l,
-        nn_val_dst_l, nn_val_ts_l, nn_val_label_l)
-
-    logger.info(f'epoch mean loss: {np.mean(m_loss)}')
-    logger.info(
-        f'train acc: {np.mean(acc)}, val acc: {val_acc}, new node val acc: {nn_val_acc}'
-    )
+opt = init_opt(args, tgan)
 
 # testing phase use all information
 tgan.ngh_finder = full_ngh_finder
@@ -349,6 +337,7 @@ nn_test_acc, nn_test_ap, nn_test_f1, nn_test_auc = eval_one_epoch(
 logger.info(
     f'Test statistics: Old nodes -- acc: {test_acc}, auc: {test_auc}, ap: {test_ap}'
 )
+
 logger.info(
     f'Test statistics: New nodes -- acc: {nn_test_acc}, auc: {nn_test_auc}, ap: {nn_test_ap}'
 )
