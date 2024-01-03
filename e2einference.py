@@ -31,7 +31,7 @@ parser.add_argument('--bs',
                     type=int,
                     default=200,
                     help='batch size (default: 200)')
-parser.add_argument('--n-epoch', type=int, default=5)
+parser.add_argument('--n-epoch', type=int, default=1)
 parser.add_argument('--n-degree',
                     type=int,
                     default=20,
@@ -187,7 +187,7 @@ train_label_l = label_l[valid_train_flag]
 
 # define the new nodes sets for testing inductiveness of the model
 train_node_set = set(train_src_l).union(train_dst_l)
-assert (len(train_node_set - mask_node_set) == len(train_node_set))
+assert (len(train_node_set - mask_node_set) == len(train_node_set))  # 这是为什么?
 new_node_set = total_node_set - train_node_set
 
 # select validation and test dataset
@@ -275,8 +275,6 @@ saved_e_feat_th = tgan.e_feat_th
 
 num_instance = len(train_src_l)
 num_batch = math.ceil(num_instance / BATCH_SIZE)
-logger.info(f'num of training instances: {num_instance}')
-logger.info(f'num of batches per epoch: {num_batch}')
 idx_list = np.arange(num_instance)
 np.random.shuffle(idx_list)
 
@@ -285,7 +283,7 @@ for epoch in range(NUM_EPOCH):
     tgan.ngh_finder = train_ngh_finder
     acc, ap, f1, auc, m_loss = [], [], [], [], []
     np.random.shuffle(idx_list)
-    logger.info('start epoch {}'.format(epoch))
+    logger.info(f'start epoch {epoch}')
 
     for k in range(num_batch):
         s_idx = k * BATCH_SIZE
@@ -348,7 +346,9 @@ nn_test_acc, nn_test_ap, nn_test_f1, nn_test_auc = eval_one_epoch(
     'test for new nodes', tgan, nn_test_rand_sampler, nn_test_src_l,
     nn_test_dst_l, nn_test_ts_l, nn_test_label_l)
 
-logger.info('Test statistics: Old nodes -- acc: {}, auc: {}, ap: {}'.format(
-    test_acc, test_auc, test_ap))
-logger.info('Test statistics: New nodes -- acc: {}, auc: {}, ap: {}'.format(
-    nn_test_acc, nn_test_auc, nn_test_ap))
+logger.info(
+    f'Test statistics: Old nodes -- acc: {test_acc}, auc: {test_auc}, ap: {test_ap}'
+)
+logger.info(
+    f'Test statistics: New nodes -- acc: {nn_test_acc}, auc: {nn_test_auc}, ap: {nn_test_ap}'
+)
