@@ -133,7 +133,7 @@ class RandEdgeSampler(object):
         return self.src_list[src_index], self.dst_list[dst_index]
 
 
-def eval_one_epoch(hint, tgan, sampler, src, dst, ts, label):
+def eval_one_epoch(hint, tgan, sampler, src, dst, ts):
     val_acc, val_ap, val_f1, val_auc = [], [], [], []
     with torch.no_grad():
         tgan = tgan.eval()
@@ -329,10 +329,10 @@ tgan.ngh_finder = full_ngh_finder
 test_acc, test_ap, test_f1, test_auc = eval_one_epoch('test for old nodes',
                                                       tgan, test_rand_sampler,
                                                       test_src_l, test_dst_l,
-                                                      test_ts_l, test_label_l)
+                                                      test_ts_l)
 nn_test_acc, nn_test_ap, nn_test_f1, nn_test_auc = eval_one_epoch(
     'test for new nodes', tgan, nn_test_rand_sampler, nn_test_src_l,
-    nn_test_dst_l, nn_test_ts_l, nn_test_label_l)
+    nn_test_dst_l, nn_test_ts_l)
 
 logger.info(
     f'Test statistics: Old nodes -- acc: {test_acc}, auc: {test_auc}, ap: {test_ap}'
