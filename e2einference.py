@@ -101,6 +101,7 @@ Path('./logs').mkdir(parents=True, exist_ok=True)
 Path('./saved_models').mkdir(parents=True, exist_ok=True)
 MODEL_SAVE_PATH = f'./saved_models/{args.model}-{args.data}.pth'
 data_dir = Path(args.dir)
+random.seed(2022)
 
 ### Set up logger
 log_time = int(time.time())
@@ -133,8 +134,10 @@ class RandEdgeSampler(object):
         return self.src_list[src_index], self.dst_list[dst_index]
 
 
-def eval_one_epoch(hint, tgan, sampler, src, dst, ts):
-    val_acc, val_ap, val_f1, val_auc = [], [], [], []
+def eval_one_epoch(hint: str, tgan: TGAN, sampler: RandEdgeSampler,
+                   src: np.ndarray, dst: np.ndarray, ts: np.ndarray):
+    print(hint)
+    val_acc, val_ap, val_auc = [], [], []
     with torch.no_grad():
         tgan = tgan.eval()
         TEST_BATCH_SIZE = 30
@@ -169,7 +172,7 @@ def eval_one_epoch(hint, tgan, sampler, src, dst, ts):
         logger.info(
             f'average inference time per batch: {t_total / num_test_batch} secs'
         )
-    return np.mean(val_acc), np.mean(val_ap), None, np.mean(val_auc)
+    return np.mean(val_acc), np.mean(val_ap), np.mean(val_auc)
 
 
 g_df = pd.read_csv(data_dir / f'ml_{DATA}.csv')
@@ -187,8 +190,6 @@ ts_l = g_df.ts.values
 
 max_src_index = src_l.max()
 max_idx = max(src_l.max(), dst_l.max())
-
-random.seed(2022)
 
 total_node_set = set(np.unique(np.hstack([g_df.u.values, g_df.i.values])))
 num_total_unique_nodes = len(total_node_set)
@@ -326,11 +327,10 @@ opt = init_opt(args, tgan)
 
 # testing phase use all information
 tgan.ngh_finder = full_ngh_finder
-test_acc, test_ap, test_f1, test_auc = eval_one_epoch('test for old nodes',
-                                                      tgan, test_rand_sampler,
-                                                      test_src_l, test_dst_l,
-                                                      test_ts_l)
-nn_test_acc, nn_test_ap, nn_test_f1, nn_test_auc = eval_one_epoch(
+test_acc, test_ap, test_auc = eval_one_epoch('test for old nodes', tgan,
+                                             test_rand_sampler, test_src_l,
+                                             test_dst_l, test_ts_l)
+nn_test_acc, nn_test_ap, nn_test_auc = eval_one_epoch(
     'test for new nodes', tgan, nn_test_rand_sampler, nn_test_src_l,
     nn_test_dst_l, nn_test_ts_l)
 
