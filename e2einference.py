@@ -142,6 +142,7 @@ def eval_one_epoch(hint: str, tgan: TGAN, sampler: RandEdgeSampler,
         tgan = tgan.eval()
         TEST_BATCH_SIZE = 30
         num_test_instance = len(src)
+        print(f'num_test_instance: {num_test_instance}')
         num_test_batch = math.ceil(num_test_instance / TEST_BATCH_SIZE)
         t_total = 0
         for k in range(num_test_batch):
@@ -330,14 +331,14 @@ tgan.ngh_finder = full_ngh_finder
 test_acc, test_ap, test_auc = eval_one_epoch('test for old nodes', tgan,
                                              test_rand_sampler, test_src_l,
                                              test_dst_l, test_ts_l)
-nn_test_acc, nn_test_ap, nn_test_auc = eval_one_epoch(
-    'test for new nodes', tgan, nn_test_rand_sampler, nn_test_src_l,
-    nn_test_dst_l, nn_test_ts_l)
+# nn_test_acc, nn_test_ap, nn_test_auc = eval_one_epoch(
+#     'test for new nodes', tgan, nn_test_rand_sampler, nn_test_src_l,
+#     nn_test_dst_l, nn_test_ts_l)
 
 logger.info(
     f'Test statistics: Old nodes -- acc: {test_acc}, auc: {test_auc}, ap: {test_ap}'
 )
 
-logger.info(
-    f'Test statistics: New nodes -- acc: {nn_test_acc}, auc: {nn_test_auc}, ap: {nn_test_ap}'
-)
+# logger.info(
+#     f'Test statistics: New nodes -- acc: {nn_test_acc}, auc: {nn_test_auc}, ap: {nn_test_ap}'
+# )
