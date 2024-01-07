@@ -63,11 +63,11 @@ def reindex(df, bipartite=False):
     return df
 
 
-def run(name, data_dir, bipartite=False):
-    PATH = str(data_dir / '{}.csv'.format(name))
-    OUT_DF = str(data_dir / 'ml_{}.csv'.format(name))
-    OUT_FEAT = str(data_dir / 'ml_{}.npy'.format(name))
-    OUT_NODE_FEAT = str(data_dir / 'ml_{}_node.npy'.format(name))
+def run(name: str, data_dir: Path, bipartite: bool = False):
+    PATH = f"{data_dir}/{name}.csv"
+    OUT_DF = f"{data_dir}/ml_{name}.csv"
+    OUT_FEAT = f"{data_dir}/ml_{name}.npy"
+    OUT_NODE_FEAT = f"{data_dir}/ml_{name}_node.npy"
 
     df, feat = preprocess(PATH)
     df = reindex(df, bipartite=bipartite)
