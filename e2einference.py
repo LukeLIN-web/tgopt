@@ -226,12 +226,6 @@ nn_val_flag = valid_val_flag * is_new_node_edge
 nn_test_flag = valid_test_flag * is_new_node_edge
 
 # validation and test with all edges
-val_src_l = src_l[valid_val_flag]
-val_dst_l = dst_l[valid_val_flag]
-val_ts_l = ts_l[valid_val_flag]
-val_e_idx_l = e_idx_l[valid_val_flag]
-val_label_l = label_l[valid_val_flag]
-
 test_src_l = src_l[valid_test_flag]
 test_dst_l = dst_l[valid_test_flag]
 test_ts_l = ts_l[valid_test_flag]
@@ -244,12 +238,6 @@ nn_val_dst_l = dst_l[nn_val_flag]
 nn_val_ts_l = ts_l[nn_val_flag]
 nn_val_e_idx_l = e_idx_l[nn_val_flag]
 nn_val_label_l = label_l[nn_val_flag]
-
-nn_test_src_l = src_l[nn_test_flag]
-nn_test_dst_l = dst_l[nn_test_flag]
-nn_test_ts_l = ts_l[nn_test_flag]
-nn_test_e_idx_l = e_idx_l[nn_test_flag]
-nn_test_label_l = label_l[nn_test_flag]
 
 ### Initialize the data structure for graph and edge sampling
 # build the graph for fast query
@@ -268,7 +256,6 @@ for src, dst, eidx, ts in zip(src_l, dst_l, e_idx_l, ts_l):
     full_adj_list[src].append((dst, eidx, ts))
     full_adj_list[dst].append((src, eidx, ts))
 full_ngh_finder = NeighborFinder(full_adj_list)
-del full_adj_list
 
 
 def init_opt(args, model: TGAN) -> TGOpt:
@@ -295,11 +282,8 @@ def init_opt(args, model: TGAN) -> TGOpt:
     return opt
 
 
-train_rand_sampler = RandEdgeSampler(train_src_l, train_dst_l)
 val_rand_sampler = RandEdgeSampler(src_l, dst_l)
-nn_val_rand_sampler = RandEdgeSampler(nn_val_src_l, nn_val_dst_l)
 test_rand_sampler = RandEdgeSampler(src_l, dst_l)
-nn_test_rand_sampler = RandEdgeSampler(nn_test_src_l, nn_test_dst_l)
 
 ### Model load
 device = torch.device(f'cuda:{GPU}' if GPU >= 0 else 'cpu')
@@ -315,7 +299,6 @@ state['e_feat_th'] = tgan.e_feat_th
 state['node_raw_embed.weight'] = tgan.n_feat_th
 state['edge_raw_embed.weight'] = tgan.e_feat_th
 tgan.load_state_dict(state)
-del state
 
 optimizer = torch.optim.Adam(tgan.parameters(), lr=LEARNING_RATE)
 criterion = torch.nn.BCELoss()
@@ -331,14 +314,7 @@ tgan.ngh_finder = full_ngh_finder
 test_acc, test_ap, test_auc = eval_one_epoch('test for old nodes', tgan,
                                              test_rand_sampler, test_src_l,
                                              test_dst_l, test_ts_l)
-# nn_test_acc, nn_test_ap, nn_test_auc = eval_one_epoch(
-#     'test for new nodes', tgan, nn_test_rand_sampler, nn_test_src_l,
-#     nn_test_dst_l, nn_test_ts_l)
 
 logger.info(
     f'Test statistics: Old nodes -- acc: {test_acc}, auc: {test_auc}, ap: {test_ap}'
 )
-
-# logger.info(
-#     f'Test statistics: New nodes -- acc: {nn_test_acc}, auc: {nn_test_auc}, ap: {nn_test_ap}'
-# )
